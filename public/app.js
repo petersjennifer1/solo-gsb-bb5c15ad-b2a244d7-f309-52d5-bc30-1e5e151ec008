@@ -4,6 +4,7 @@ const form = document.getElementById('impose-form');
 const fileInput = document.getElementById('pdf-input');
 const fileDrop = document.getElementById('file-drop');
 const fileLabel = document.getElementById('file-label');
+const chapterStartsInput = document.getElementById('chapter-starts-input');
 const submitBtn = document.getElementById('submit-btn');
 const formError = document.getElementById('form-error');
 const resultCard = document.getElementById('result-card');
@@ -52,30 +53,44 @@ function hideError() {
   formError.hidden = true;
 }
 
-function slotHtml(page, side, pos) {
-  if (page === null || page === undefined) {
+function slotHtml(slot, side, pos) {
+  if (slot === null || slot === undefined) {
     return `
       <div class="slot blank ${side} ${pos}">
-        <span class="slot-num">空白</span>
+        <span class="slot-num">末帖补白</span>
+        <span class="slot-pos">${pos === 'left' ? '左' : '右'}</span>
+      </div>`;
+  }
+  if (slot.kind === 'chapterBlank') {
+    return `
+      <div class="slot chapter-blank ${side} ${pos}">
+        <span class="slot-num">章节空白</span>
         <span class="slot-pos">${pos === 'left' ? '左' : '右'}</span>
       </div>`;
   }
   return `
     <div class="slot ${side} ${pos}">
-      <span class="slot-num">P${page}</span>
+      <span class="slot-num">P${slot.source}</span>
       <span class="slot-pos">${pos === 'left' ? '左页' : '右页'}</span>
     </div>`;
 }
 
 function renderResult(data) {
-  const stats = [
-    ['原 PDF 页数', data.sourceCount],
+  const stats = [['原 PDF 页数', data.sourceCount]];
+  if (data.chapterStarts && data.chapterStarts.length) {
+    stats.push(
+      ['章节起页', data.chapterStarts.map((p) => `P${p}`).join('、')],
+      ['章节空白', `${data.chapterBlankCount} 页`],
+      ['书序总页数', data.bookCount]
+    );
+  }
+  stats.push(
     ['每帖页数', `${data.pagesPerSignature} 页（${data.sheetsPerSignature} 张纸）`],
     ['总帖数', data.signatureCount],
     ['需纸张数', `${data.outputSheets} 张`],
     ['输出 PDF 面数', data.outputPages],
-    ['末帖补空白', `${data.blankCount} 页`],
-  ];
+    ['末帖补白', `${data.blankCount} 页`]
+  );
   statsEl.innerHTML = stats
     .map(
       ([label, value]) => `
@@ -126,7 +141,7 @@ function renderResult(data) {
       <div class="signature">
         <div class="signature-head">
           第 ${sig.signatureIndex} 帖
-          <span class="muted">原书页 P${sig.startPage} – P${sig.endPage}</span>
+          <span class="muted">书序第 ${sig.startPage} – ${sig.endPage} 位</span>
         </div>
         ${sheets}
       </div>`;
@@ -157,6 +172,7 @@ form.addEventListener('submit', async (e) => {
   const body = new FormData();
   body.append('pdf', file);
   body.append('sheetsPerSignature', sheetsPerSignature);
+  body.append('chapterStarts', chapterStartsInput.value.trim());
 
   submitBtn.disabled = true;
   submitBtn.textContent = '拼版处理中…';

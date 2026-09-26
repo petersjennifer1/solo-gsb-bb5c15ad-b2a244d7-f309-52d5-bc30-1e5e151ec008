@@ -3,6 +3,7 @@
  *
  * 功能：
  * - 接收按阅读顺序排列的多页 PDF
+ * - 可选“章节起页”：指定页若将落在偶数书序位（左页），在其前插入一页空白
  * - 按每帖 1 或 2 张纸分帖（每帖 4 或 8 页），仅在末帖补空白
  * - 生成 A4 横向双面拼版 PDF（每张纸 2 个输出面，每面左右各放一页）
  * - 折页方式：每张 A4 横向纸沿竖直中线对折，得到 A5 竖向小册
@@ -33,26 +34,94 @@ const PAGE_W = 595.28;
 const PAGE_H = 841.89;
 
 /**
+ * 解析“章节起页”输入
+ *
+ * @param {string} raw 逗号分隔的原 PDF 页码（兼容中文逗号，允许空格）；空值表示不设置
+ * @param {number} sourceCount 原 PDF 页数
+ * @returns {number[]} 升序排列的章节起页（原页码，1 起）
+ * @throws {Error} 重复、非整数或越界页码
+ */
+function parseChapterStarts(raw, sourceCount) {
+  if (raw === undefined || raw === null) return [];
+  const text = String(raw).trim();
+  if (!text) return [];
+
+  const starts = [];
+  const seen = new Set();
+  for (const token of text.split(/[,，]/)) {
+    const t = token.trim();
+    if (!/^[+-]?\d+$/.test(t)) {
+      throw new Error(`章节起页「${t}」不是整数，请用逗号分隔整数页码。`);
+    }
+    const n = Number(t);
+    if (n < 1 || n > sourceCount) {
+      throw new Error(`章节起页 ${n} 超出范围，应在 1 – ${sourceCount} 之间。`);
+    }
+    if (seen.has(n)) {
+      throw new Error(`章节起页 ${n} 重复，请去重后再试。`);
+    }
+    seen.add(n);
+    starts.push(n);
+  }
+  return starts.sort((a, b) => a - b);
+}
+
+/**
+ * 构造书序：按原页顺序排列，必要时在章节起页前插入空白页
+ *
+ * 书序位置从 1 计，奇数位为右页。若某章节起页将落在偶数位，
+ * 则在它前面插入一页“章节空白”；后续页的位置判断计入此前已插入的空白。
+ * 例如 6 页指定 2,3，书序为：1、空白、2、空白、3、4、5、6。
+ *
+ * @param {number} sourceCount 原 PDF 页数
+ * @param {number[]} chapterStarts 章节起页（原页码，1 起）
+ * @returns {Array<{kind:'page', source:number}|{kind:'chapterBlank'}>}
+ *   书序槽位序列：page 表示原页（source 为原页码），chapterBlank 表示章节空白；
+ *   每个原页恰好出现一次，不遗漏、不重复
+ */
+function buildBookOrder(sourceCount, chapterStarts = []) {
+  const startSet = new Set(chapterStarts);
+  const order = [];
+  for (let p = 1; p <= sourceCount; p++) {
+    // 下一槽位的书序位置 = order.length + 1；落在偶数位时先补一页章节空白
+    if (startSet.has(p) && (order.length + 1) % 2 === 0) {
+      order.push({ kind: 'chapterBlank' });
+    }
+    order.push({ kind: 'page', source: p });
+  }
+  return order;
+}
+
+/**
  * 生成分帖拼版计划
  *
- * @param {number} sourceCount 原 PDF 页数（按阅读顺序）
+ * @param {number|Array} bookOrderOrCount 书序槽位序列（buildBookOrder 的结果）；
+ *   传入数字时视为不设置章节起页的原页数
  * @param {number} sheetsPerSignature 每帖纸张数：1（每帖 4 页）或 2（每帖 8 页）
- * @returns {{sourceCount, sheetsPerSignature, pagesPerSignature, totalPadded, blankCount, signatures}}
+ * @returns {{sourceCount, chapterBlankCount, bookCount, bookOrder, sheetsPerSignature,
+ *   pagesPerSignature, signatureCount, totalPadded, blankCount, signatures}}
+ *   槽位取值：{kind:'page', source} 原页 / {kind:'chapterBlank'} 章节空白 / null 末帖补白
  */
-function buildPlan(sourceCount, sheetsPerSignature) {
+function buildPlan(bookOrderOrCount, sheetsPerSignature) {
+  const bookOrder =
+    typeof bookOrderOrCount === 'number' ? buildBookOrder(bookOrderOrCount) : bookOrderOrCount;
+  const bookCount = bookOrder.length;
+  const sourceCount = bookOrder.filter((slot) => slot.kind === 'page').length;
+  const chapterBlankCount = bookCount - sourceCount;
+
   const pagesPerSignature = sheetsPerSignature * 4;
-  const signatureCount = Math.ceil(sourceCount / pagesPerSignature);
+  const signatureCount = Math.ceil(bookCount / pagesPerSignature);
   const totalPadded = signatureCount * pagesPerSignature;
 
-  // 输出顺序上的页码槽位：1..totalPadded（超过 sourceCount 的为空白，用 null 表示）
-  const slotAt = (globalPos) => (globalPos <= sourceCount ? globalPos : null);
+  // 书序位置 1..bookCount 对应书序槽位；超出部分为末帖补白，用 null 表示
+  const slotAt = (globalPos) => (globalPos <= bookCount ? bookOrder[globalPos - 1] : null);
 
   const signatures = [];
   for (let sig = 0; sig < signatureCount; sig++) {
-    const sigStart = sig * pagesPerSignature + 1; // 本帖在总顺序中的起始页码
+    const sigStart = sig * pagesPerSignature + 1; // 本帖在书序中的起始位置
     const sheets = [];
 
-    // 套帖：第 k 张（由外向内）的 4 个页码（书序，1 起）
+    // 套帖：第 k 张（由外向内）的 4 个书序位置（1 起）
     // 正面（先打印）：左 = 本帖最后一页，右 = 本帖第一页
     // 反面（后打印）：左 = 第 (2k+2) 页，右 = 倒数第 (2k+1) 页
     for (let k = 0; k < sheetsPerSignature; k++) {
@@ -72,18 +141,21 @@ function buildPlan(sourceCount, sheetsPerSignature) {
     signatures.push({
       signatureIndex: sig + 1,
       startPage: sigStart,
-      endPage: Math.min(sigStart + pagesPerSignature - 1, sourceCount),
+      endPage: Math.min(sigStart + pagesPerSignature - 1, bookCount),
       sheets,
     });
   }
 
   return {
     sourceCount,
+    chapterBlankCount,
+    bookCount,
+    bookOrder,
     sheetsPerSignature,
     pagesPerSignature,
     signatureCount,
     totalPadded,
-    blankCount: totalPadded - sourceCount,
+    blankCount: totalPadded - bookCount,
     signatures,
   };
 }
@@ -117,15 +189,16 @@ async function embedSourcePages(outDoc, sourceDoc) {
 }
 
 /**
- * 等比缩放并居中绘制一页到目标区域（应用源页 /Rotate，使阅读方向正确）
+ * 等比缩放并居中绘制一个书序槽位到目标区域（应用源页 /Rotate，使阅读方向正确）
  *
- * @param entries embedSourcePages() 的结果（0 起）
- * @param sourcePageNumber 书序页码（1 起），null 表示末帖补的空白槽位
+ * @param entries embedSourcePages() 的结果（按原页码 0 起）
+ * @param slot 书序槽位：{kind:'page', source} 绘制对应原页；
+ *   {kind:'chapterBlank'}（章节空白）与 null（末帖补白）均留空
  */
-function drawFittedPage(targetPage, entries, sourcePageNumber, boxX, boxY, boxW, boxH) {
-  if (sourcePageNumber === null || sourcePageNumber === undefined) return;
+function drawFittedPage(targetPage, entries, slot, boxX, boxY, boxW, boxH) {
+  if (!slot || slot.kind !== 'page') return;
 
-  const entry = entries[sourcePageNumber - 1];
+  const entry = entries[slot.source - 1];
   if (!entry || !entry.embedded) return; // 源页本身是空白页，留空即可
 
   const { embedded, rotation } = entry;
@@ -241,15 +314,24 @@ app.post('/api/impose', upload.single('pdf'), async (req, res, next) => {
       return res.status(400).json({ error: 'PDF 至少需要 2 页才能拼版。' });
     }
 
-    const plan = buildPlan(sourceCount, sheetsPerSignature);
+    let chapterStarts;
+    try {
+      chapterStarts = parseChapterStarts(req.body.chapterStarts, sourceCount);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    // 书序 → 原页的映射在计划与拼版 PDF 之间共用，逐帖示意亦取自同一计划
+    const plan = buildPlan(buildBookOrder(sourceCount, chapterStarts), sheetsPerSignature);
     const imposedDoc = await createImposedPdf(sourceDoc, plan);
-    const pdfBuffer = await imposedDoc.save();
+    const pdfBytes = await imposedDoc.save(); // Uint8Array，需包成 Buffer 才能转 base64
 
     res.json({
       ...plan,
+      chapterStarts,
       outputPages: plan.signatureCount * sheetsPerSignature * 2, // 每张纸正反 2 个拼版面
       outputSheets: plan.signatureCount * sheetsPerSignature,
-      pdfBase64: pdfBuffer.toString('base64'),
+      pdfBase64: Buffer.from(pdfBytes).toString('base64'),
     });
   } catch (err) {
     next(err);
@@ -272,4 +354,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, buildPlan, createImposedPdf, PORT };
+module.exports = { app, parseChapterStarts, buildBookOrder, buildPlan, createImposedPdf, PORT };

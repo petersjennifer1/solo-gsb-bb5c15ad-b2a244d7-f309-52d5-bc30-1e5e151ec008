@@ -15,6 +15,8 @@
   --front: #eef4ff;
   --back: #fdf3ec;
   --blank: #f6f6f6;
+  --chapter-blank: #fdf6e0;
+  --chapter-blank-ink: #8a6d1d;
 }
 
 body {
@@ -121,6 +123,28 @@ main {
 }
 
 .file-hint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.text-input {
+  width: 100%;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  transition: border-color 0.15s;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.field-hint {
+  margin: 6px 0 0;
   font-size: 13px;
   color: var(--muted);
 }
@@ -327,12 +351,19 @@ main {
   border-style: dashed;
 }
 
+.slot.chapter-blank {
+  background: var(--chapter-blank);
+  color: var(--chapter-blank-ink);
+  border-style: dashed;
+}
+
 .slot-num {
   font-size: 20px;
   font-weight: 700;
 }
 
-.slot.blank .slot-num {
+.slot.blank .slot-num,
+.slot.chapter-blank .slot-num {
   font-size: 14px;
   font-weight: 600;
 }

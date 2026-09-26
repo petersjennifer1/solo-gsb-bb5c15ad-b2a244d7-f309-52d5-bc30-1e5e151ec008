@@ -52,6 +52,22 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="chapter-starts-input">章节起页（可选）</label>
+          <input
+            type="text"
+            id="chapter-starts-input"
+            name="chapterStarts"
+            class="text-input"
+            placeholder="如：2,3"
+            autocomplete="off"
+          />
+          <p class="field-hint">
+            用逗号分隔原 PDF 页码，指定各章起始页。书序位置从 1 计、奇数为右页；
+            若指定页将落在偶数位，会在它前面自动插入一页空白，使每章从右页开始。留空则不插入。
+          </p>
+        </div>
+
         <button type="submit" class="btn btn-primary" id="submit-btn">开始拼版</button>
         <p class="error" id="form-error" role="alert" hidden></p>
       </form>
