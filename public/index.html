@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>折页小册子拼版工具 · 社区印刷点</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" aria-hidden="true">📖</div>
+      <div>
+        <h1>折页小册子拼版工具</h1>
+        <p class="subtitle">上传按阅读顺序排列的多页 PDF，一键生成 A4 横向双面拼版文件</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card" aria-labelledby="form-title">
+      <h2 id="form-title" class="card-title">① 上传与分帖设置</h2>
+
+      <form id="impose-form">
+        <div class="field">
+          <label for="pdf-input">原 PDF（按阅读顺序排列）</label>
+          <label class="file-drop" for="pdf-input" id="file-drop">
+            <input type="file" id="pdf-input" name="pdf" accept="application/pdf,.pdf" hidden />
+            <span class="file-icon" aria-hidden="true">📄</span>
+            <span class="file-text" id="file-label">点击选择 PDF 文件</span>
+            <span class="file-hint">要求为有效 PDF，至少 2 页，最大 100MB</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label>每帖纸张数</label>
+          <div class="radio-group" role="radiogroup" aria-label="每帖纸张数">
+            <label class="radio-card">
+              <input type="radio" name="sheetsPerSignature" value="1" checked />
+              <span class="radio-body">
+                <span class="radio-title">1 张纸 / 帖</span>
+                <span class="radio-desc">每帖 4 页，单张对折。页少、纸张少的薄册适用</span>
+              </span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="sheetsPerSignature" value="2" />
+              <span class="radio-body">
+                <span class="radio-title">2 张纸 / 帖</span>
+                <span class="radio-desc">每帖 8 页，两张套叠后对折。稍厚册子更省整帖</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">开始拼版</button>
+        <p class="error" id="form-error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section class="card" id="result-card" aria-labelledby="result-title" hidden>
+      <h2 id="result-title" class="card-title">② 拼版结果</h2>
+
+      <div class="stats" id="stats"></div>
+
+      <div id="signatures"></div>
+
+      <div class="tips">
+            <h3>打印与装订提示</h3>
+            <ul>
+              <li>纸张：<strong>A4</strong>，方向：<strong>横向</strong>；双面打印务必选择 <strong>短边翻转</strong>（部分驱动写作“沿短边装订 / 翻转短边”）。</li>
+              <li>按文件中的页面顺序整份双面打印，每张纸先出正面（外页）、后出反面（内页）。</li>
+              <li>每帖的纸沿竖直中线对折；2 张/帖时按第 1 张在外、第 2 张在内套叠。</li>
+              <li>各帖按帖序排好，叠齐后在折缝处装订，页码即自然连续。</li>
+            </ul>
+      </div>
+
+      <button type="button" class="btn btn-success" id="download-btn">⬇ 下载拼版 PDF</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      社区印刷点折页拼版工具 · 文件仅在内存中处理，刷新页面后自动清除
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "booklet-imposition",
+  "version": "1.0.0",
+  "description": "社区印刷点折页小册子拼版工具：上传按阅读顺序排列的 PDF，生成 A4 横向双面拼版 PDF",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "pdf-lib": "^1.17.1"
+  }
+}

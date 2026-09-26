@@ -1,0 +1,11 @@
+services:
+  booklet-imposition:
+    build: .
+    image: booklet-imposition:latest
+    container_name: booklet-imposition
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MAX_UPLOAD_MB=100
+    restart: unless-stopped
