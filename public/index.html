@@ -52,6 +52,20 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="chapter-starts">章节起页（可选）</label>
+          <input
+            type="text"
+            id="chapter-starts"
+            name="chapterStarts"
+            placeholder="例如：2,3"
+            autocomplete="off"
+          />
+          <p class="field-hint">
+            用逗号分隔原 PDF 页码，指定各章节的起始页；该页将被安排为右页（奇数位置），必要时在其前插入一页空白。留空则不指定。
+          </p>
+        </div>
+
         <button type="submit" class="btn btn-primary" id="submit-btn">开始拼版</button>
         <p class="error" id="form-error" role="alert" hidden></p>
       </form>
@@ -61,6 +75,18 @@
       <h2 id="result-title" class="card-title">② 拼版结果</h2>
 
       <div class="stats" id="stats"></div>
+
+      <div class="book-order" id="book-order" hidden>
+        <div class="book-order-head">
+          <h3>书序（装订后翻阅顺序）</h3>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot dot-content"></span>原页</span>
+            <span class="legend-item"><span class="legend-dot dot-chapter"></span>章节空白</span>
+            <span class="legend-item"><span class="legend-dot dot-pad"></span>末帖补白</span>
+          </div>
+        </div>
+        <div class="book-seq" id="book-seq"></div>
+      </div>
 
       <div id="signatures"></div>
 

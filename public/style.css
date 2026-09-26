@@ -162,6 +162,29 @@ main {
   color: var(--muted);
 }
 
+/* 文本输入 */
+.field input[type='text'] {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.field input[type='text']:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 93, 168, 0.15);
+}
+
+.field-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* 按钮 */
 .btn {
   display: inline-block;
@@ -327,6 +350,18 @@ main {
   border-style: dashed;
 }
 
+.slot.chapter-blank {
+  background: #fff3e0;
+  border-color: #e0a64c;
+  color: #9a6410;
+}
+
+.slot.pad-blank {
+  background: #eef1f5;
+  border-color: #b9c2d1;
+  color: #6b7688;
+}
+
 .slot-num {
   font-size: 20px;
   font-weight: 700;
@@ -359,6 +394,95 @@ main {
 
 .flip-hint .line {
   flex: 0 0 auto;
+}
+
+/* 书序与图例 */
+.book-order {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.book-order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.book-order-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.dot-content {
+  background: var(--front);
+  border-color: var(--primary);
+}
+
+.dot-chapter {
+  background: #fff3e0;
+  border-color: #e0a64c;
+}
+
+.dot-pad {
+  background: #eef1f5;
+  border-color: #b9c2d1;
+}
+
+.book-seq {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seq-chip {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.seq-content {
+  background: var(--front);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.seq-chapter {
+  background: #fff3e0;
+  border-color: #e0a64c;
+  color: #9a6410;
+}
+
+.seq-pad {
+  background: #eef1f5;
+  border-color: #b9c2d1;
+  color: #6b7688;
 }
 
 /* 提示 */

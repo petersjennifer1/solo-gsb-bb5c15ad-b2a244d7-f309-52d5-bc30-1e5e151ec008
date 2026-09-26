@@ -9,6 +9,8 @@ const formError = document.getElementById('form-error');
 const resultCard = document.getElementById('result-card');
 const statsEl = document.getElementById('stats');
 const signaturesEl = document.getElementById('signatures');
+const bookOrderEl = document.getElementById('book-order');
+const bookSeqEl = document.getElementById('book-seq');
 const downloadBtn = document.getElementById('download-btn');
 
 let lastPdfBase64 = null;
@@ -52,29 +54,45 @@ function hideError() {
   formError.hidden = true;
 }
 
-function slotHtml(page, side, pos) {
-  if (page === null || page === undefined) {
+function slotHtml(slot, side, pos) {
+  const posLabel = pos === 'left' ? '左页' : '右页';
+  if (!slot || slot.type !== 'content') {
+    const isChapter = slot && slot.type === 'chapter-blank';
+    const label = isChapter ? '章节空白' : '末帖补白';
     return `
-      <div class="slot blank ${side} ${pos}">
-        <span class="slot-num">空白</span>
-        <span class="slot-pos">${pos === 'left' ? '左' : '右'}</span>
+      <div class="slot blank ${isChapter ? 'chapter-blank' : 'pad-blank'} ${side} ${pos}">
+        <span class="slot-num">${label}</span>
+        <span class="slot-pos">${posLabel}</span>
       </div>`;
   }
   return `
     <div class="slot ${side} ${pos}">
-      <span class="slot-num">P${page}</span>
-      <span class="slot-pos">${pos === 'left' ? '左页' : '右页'}</span>
+      <span class="slot-num">P${slot.sourcePage}</span>
+      <span class="slot-pos">${posLabel}</span>
     </div>`;
+}
+
+function seqChipHtml(slot, index) {
+  if (slot.type === 'content') {
+    return `<span class="seq-chip seq-content" title="书序第 ${index + 1} 位">P${slot.sourcePage}</span>`;
+  }
+  if (slot.type === 'chapter-blank') {
+    return `<span class="seq-chip seq-chapter" title="书序第 ${index + 1} 位">章节空白</span>`;
+  }
+  return `<span class="seq-chip seq-pad" title="书序第 ${index + 1} 位">补白</span>`;
 }
 
 function renderResult(data) {
   const stats = [
     ['原 PDF 页数', data.sourceCount],
+    ['书序总页数', `${data.bookPageCount} 页（含空白）`],
+    ['章节起页', data.chapterStarts.length ? data.chapterStarts.map((p) => `P${p}`).join('、') : '未指定'],
+    ['章节空白', `${data.chapterBlankCount} 页`],
+    ['末帖补白', `${data.padBlankCount} 页`],
     ['每帖页数', `${data.pagesPerSignature} 页（${data.sheetsPerSignature} 张纸）`],
     ['总帖数', data.signatureCount],
     ['需纸张数', `${data.outputSheets} 张`],
     ['输出 PDF 面数', data.outputPages],
-    ['末帖补空白', `${data.blankCount} 页`],
   ];
   statsEl.innerHTML = stats
     .map(
@@ -126,12 +144,15 @@ function renderResult(data) {
       <div class="signature">
         <div class="signature-head">
           第 ${sig.signatureIndex} 帖
-          <span class="muted">原书页 P${sig.startPage} – P${sig.endPage}</span>
+          <span class="muted">含原页 P${sig.sourceStart} – P${sig.sourceEnd}</span>
         </div>
         ${sheets}
       </div>`;
     })
     .join('');
+
+  bookSeqEl.innerHTML = data.sequence.map(seqChipHtml).join('');
+  bookOrderEl.hidden = false;
 }
 
 function base64ToBlob(base64) {
@@ -153,10 +174,13 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  const sheetsPerSignature = new FormData(form).get('sheetsPerSignature');
+  const formData = new FormData(form);
+  const sheetsPerSignature = formData.get('sheetsPerSignature');
+  const chapterStarts = (formData.get('chapterStarts') || '').trim();
   const body = new FormData();
   body.append('pdf', file);
   body.append('sheetsPerSignature', sheetsPerSignature);
+  body.append('chapterStarts', chapterStarts);
 
   submitBtn.disabled = true;
   submitBtn.textContent = '拼版处理中…';
@@ -170,7 +194,10 @@ form.addEventListener('submit', async (e) => {
 
     lastPdfBase64 = data.pdfBase64;
     const base = file.name.replace(/\.pdf$/i, '');
-    lastFileName = `${base}-a4-${sheetsPerSignature}张每帖-拼版.pdf`;
+    const chapterPart = chapterStarts
+      ? `-章节起页${chapterStarts.replace(/[^0-9]+/g, '_')}`
+      : '';
+    lastFileName = `${base}-a4-${sheetsPerSignature}张每帖${chapterPart}-拼版.pdf`;
 
     renderResult(data);
     resultCard.hidden = false;
